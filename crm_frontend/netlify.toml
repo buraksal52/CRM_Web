@@ -1,0 +1,26 @@
+# Netlify Configuration
+[build]
+  # Build komutu
+  command = "npm run build"
+  
+  # Build çıktısının olduğu klasör (Vite için dist)
+  publish = "dist"
+  
+  # Node.js versiyonu
+  [build.environment]
+    NODE_VERSION = "18"
+
+# SPA için redirects (yedek olarak)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers - Security ve CORS
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer-when-downgrade"

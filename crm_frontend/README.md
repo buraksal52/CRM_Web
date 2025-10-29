@@ -247,6 +247,76 @@ npm run preview
 # Production build'i önizle
 ```
 
+### Netlify Deployment
+
+Bu proje Netlify'da deploy edilmeye hazır hale getirilmiştir.
+
+#### Otomatik Yapılandırma
+- ✅ `netlify.toml` - Build ve redirect ayarları
+- ✅ `public/_redirects` - SPA routing için
+- ✅ Build directory: `dist`
+- ✅ Build command: `npm run build`
+
+#### Netlify'da Deploy Adımları
+
+1. **GitHub'a push edin:**
+```bash
+git add .
+git commit -m "Add Netlify configuration"
+git push origin main
+```
+
+2. **Netlify'da yeni site oluşturun:**
+   - [Netlify Dashboard](https://app.netlify.com/) → "Add new site" → "Import an existing project"
+   - GitHub repository'nizi seçin
+   - Build settings otomatik algılanacak:
+     - Build command: `npm run build`
+     - Publish directory: `dist`
+     - Base directory: `crm_frontend`
+
+3. **Environment Variables ekleyin:**
+   - Site settings → Build & deploy → Environment
+   - `VITE_API_URL` = Backend API URL'iniz (örn: `https://your-backend.com/api`)
+
+4. **Deploy edin:**
+   - "Deploy site" butonuna tıklayın
+   - Build tamamlandıktan sonra siteniz yayında!
+
+#### Yaygın Sorunlar ve Çözümleri
+
+**❌ Page Not Found hatası:**
+- ✅ Çözüm: `_redirects` dosyası zaten eklendi. Tekrar build alın.
+
+**❌ API bağlantı hatası:**
+- ✅ Çözüm: CORS ayarlarını backend'de kontrol edin
+- Backend `settings.py` içinde Netlify domain'inizi `CORS_ALLOWED_ORIGINS`'e ekleyin:
+```python
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://your-site.netlify.app",
+]
+```
+
+**❌ Build başarısız:**
+- ✅ Çözüm: Base directory'yi `crm_frontend` olarak ayarlayın
+- Node.js version: 18+ (netlify.toml'da belirtildi)
+
+#### Custom Domain (Opsiyonel)
+
+1. Netlify Dashboard → Domain settings
+2. "Add custom domain" → Domain adınızı girin
+3. DNS kayıtlarını güncelleyin (Netlify size yönlendirme verecek)
+4. SSL sertifikası otomatik olarak oluşturulur
+
+#### Sürekli Deployment
+
+Her `main` branch'ine push yaptığınızda Netlify otomatik olarak yeniden deploy eder.
+
+Branch bazlı preview URL'ler için:
+- Feature branch oluşturun
+- Push edin
+- Netlify otomatik preview URL oluşturur
+
 ## 📝 Environment Variables
 
 `.env` dosyası oluşturun:
