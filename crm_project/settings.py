@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-7hdh!=aosr@c&7($150ifqcuhlsz2^)20a4#zb6h@yz&166rfx
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 
 
 # Application definition
@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'crm_app',
     'django_filters',
+    'drf_spectacular',  # OpenAPI schema and documentation
 ]
 
 MIDDLEWARE = [
@@ -53,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'crm_app.middleware.RateLimitMiddleware',  # Rate limiting middleware
 ]
 
 ROOT_URLCONF = 'crm_project.urls'
@@ -134,6 +136,58 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',  # Enable drf-spectacular
+}
+
+# drf-spectacular settings for OpenAPI schema generation
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'CRM API',
+    'DESCRIPTION': 'A comprehensive Customer Relationship Management (CRM) API with features for managing customers, leads, and tasks. Built with Django REST Framework and JWT authentication.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    
+    # Authentication configuration
+    'SECURITY': [{'bearerAuth': []}],
+    'AUTHENTICATION_SCHEMES': {
+        'bearerAuth': {
+            'type': 'http',
+            'scheme': 'bearer',
+            'bearerFormat': 'JWT',
+        }
+    },
+    
+    # UI Configuration
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+        'filter': True,
+    },
+    
+    # Schema customization
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Local Development Server'},
+    ],
+    
+    # Contact and license information
+    'CONTACT': {
+        'name': 'CRM API Support',
+        'email': 'support@crm-api.com',
+    },
+    'LICENSE': {
+        'name': 'MIT License',
+    },
+    
+    # Tags for grouping endpoints
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'User authentication and registration endpoints'},
+        {'name': 'Customers', 'description': 'Customer management operations'},
+        {'name': 'Leads', 'description': 'Lead tracking and management'},
+        {'name': 'Tasks', 'description': 'Task assignment and tracking'},
+    ],
 }
 
 CORS_ALLOW_ALL_ORIGINS = True

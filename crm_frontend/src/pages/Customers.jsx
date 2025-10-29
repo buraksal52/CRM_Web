@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { isAdmin, canCreateResource } from '../utils/auth';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmModal from '../components/ConfirmModal';
+import { showSuccess, showError } from '../utils/toast';
 
 function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -58,9 +59,12 @@ function Customers() {
     } catch (err) {
       if (err.response?.status === 401) {
         // Token expired or invalid
+        showError('Session expired. Please log in again.');
         navigate('/login');
       } else {
-        setError('Failed to fetch customers. Please try again.');
+        const errorMessage = 'Failed to fetch customers. Please try again.';
+        setError(errorMessage);
+        showError(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -129,15 +133,19 @@ function Customers() {
       if (editingCustomer) {
         // Update existing customer
         await api.patch(`/customers/${editingCustomer.id}/`, formData);
+        showSuccess('Customer updated successfully! ✅');
       } else {
         // Create new customer
         await api.post('/customers/', formData);
+        showSuccess('Customer created successfully! 🎉');
       }
       
       handleCloseModal();
       fetchCustomers(); // Refresh the list
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save customer');
+      const errorMessage = err.response?.data?.detail || 'Failed to save customer';
+      setError(errorMessage);
+      showError(errorMessage);
     }
   };
 
@@ -151,11 +159,14 @@ function Customers() {
 
     try {
       await api.delete(`/customers/${customerToDelete.id}/`);
+      showSuccess(`Customer "${customerToDelete.name}" deleted successfully! 🗑️`);
       setShowDeleteModal(false);
       setCustomerToDelete(null);
       fetchCustomers(); // Refresh the list
     } catch (err) {
-      setError('Failed to delete customer');
+      const errorMessage = err.response?.data?.detail || 'Failed to delete customer';
+      setError(errorMessage);
+      showError(errorMessage);
       setShowDeleteModal(false);
     }
   };

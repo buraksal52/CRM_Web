@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { isAdmin, canModifyResource, getUserId } from '../utils/auth';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmModal from '../components/ConfirmModal';
+import { showSuccess, showError } from '../utils/toast';
 
 function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -70,9 +71,12 @@ function Tasks() {
       setTotalPages(Math.ceil(count / 10));
     } catch (err) {
       if (err.response?.status === 401) {
+        showError('Session expired. Please log in again.');
         navigate('/login');
       } else {
-        setError('Failed to fetch tasks. Please try again.');
+        const errorMessage = 'Failed to fetch tasks. Please try again.';
+        setError(errorMessage);
+        showError(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -147,15 +151,19 @@ function Tasks() {
       if (editingTask) {
         // Update existing task
         await api.patch(`/tasks/${editingTask.id}/`, submitData);
+        showSuccess('Task updated successfully! ✅');
       } else {
         // Create new task
         await api.post('/tasks/', submitData);
+        showSuccess('Task created successfully! 🎉');
       }
       
       handleCloseModal();
       fetchTasks(); // Refresh the list
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save task');
+      const errorMessage = err.response?.data?.detail || 'Failed to save task';
+      setError(errorMessage);
+      showError(errorMessage);
     }
   };
 
@@ -169,11 +177,14 @@ function Tasks() {
 
     try {
       await api.delete(`/tasks/${taskToDelete.id}/`);
+      showSuccess(`Task "${taskToDelete.title}" deleted successfully! 🗑️`);
       setShowDeleteModal(false);
       setTaskToDelete(null);
       fetchTasks(); // Refresh the list
     } catch (err) {
-      setError('Failed to delete task');
+      const errorMessage = err.response?.data?.detail || 'Failed to delete task';
+      setError(errorMessage);
+      showError(errorMessage);
       setShowDeleteModal(false);
     }
   };
@@ -183,9 +194,13 @@ function Tasks() {
       await api.patch(`/tasks/${task.id}/`, {
         completed: !task.completed,
       });
+      const status = !task.completed ? 'completed' : 'reopened';
+      showSuccess(`Task marked as ${status}! ${!task.completed ? '✅' : '🔄'}`);
       fetchTasks(); // Refresh the list
     } catch (err) {
-      setError('Failed to update task status');
+      const errorMessage = err.response?.data?.detail || 'Failed to update task status';
+      setError(errorMessage);
+      showError(errorMessage);
     }
   };
 
@@ -331,7 +346,7 @@ function Tasks() {
                       {task.description}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {task.assigned_to ? `User #${task.assigned_to}` : 'Unassigned'}
+                      {task.assigned_to_name || 'Unassigned'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className={

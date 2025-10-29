@@ -5,15 +5,15 @@ const Card = ({
   title, 
   subtitle,
   icon,
-  iconBgColor = 'bg-blue-100',
-  iconColor = 'text-blue-600',
-  borderColor = 'border-blue-500',
+  iconBgColor = 'bg-blue-100 dark:bg-blue-900',
+  iconColor = 'text-blue-600 dark:text-blue-300',
+  borderColor = 'border-blue-500 dark:border-blue-400',
   className = '',
   onClick,
   hoverable = false,
 }) => {
-  const baseClasses = "bg-white rounded-lg shadow-md overflow-hidden transition-all duration-200";
-  const hoverClasses = hoverable ? "hover:shadow-lg hover:scale-105 cursor-pointer" : "";
+  const baseClasses = "bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-900/50 overflow-hidden transition-all duration-200";
+  const hoverClasses = hoverable ? "hover:shadow-lg dark:hover:shadow-gray-900/80 hover:scale-105 cursor-pointer" : "";
   
   return (
     <div 
@@ -25,12 +25,12 @@ const Card = ({
           <div className="flex items-center justify-between">
             <div className="flex-1">
               {title && (
-                <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">
                   {title}
                 </h3>
               )}
               {subtitle && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {subtitle}
                 </p>
               )}

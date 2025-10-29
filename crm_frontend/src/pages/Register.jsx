@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { showSuccess, showError } from '../utils/toast';
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -66,6 +67,7 @@ function Register() {
     
     // Validate form
     if (!validateForm()) {
+      showError('Please fix the form errors before submitting.');
       return;
     }
 
@@ -82,7 +84,7 @@ function Register() {
       });
 
       // Registration successful - redirect to login
-      alert('Registration successful! Please login.');
+      showSuccess('Registration successful! Please log in. 🎉');
       navigate('/login');
 
       // Alternative: Auto-login after registration
@@ -114,8 +116,11 @@ function Register() {
         });
         
         setErrors(serverErrors);
+        showError('Registration failed. Please check the form errors.');
       } else {
-        setErrors({ general: 'An error occurred. Please try again.' });
+        const errorMessage = 'An error occurred. Please try again.';
+        setErrors({ general: errorMessage });
+        showError(errorMessage);
       }
     } finally {
       setLoading(false);

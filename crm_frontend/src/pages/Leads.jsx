@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { isAdmin } from '../utils/auth';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmModal from '../components/ConfirmModal';
+import { showSuccess, showError } from '../utils/toast';
 
 function Leads() {
   const [leads, setLeads] = useState([]);
@@ -75,9 +76,12 @@ function Leads() {
       }
     } catch (err) {
       if (err.response?.status === 401) {
+        showError('Session expired. Please log in again.');
         navigate('/login');
       } else {
-        setError('Failed to fetch leads. Please try again.');
+        const errorMessage = 'Failed to fetch leads. Please try again.';
+        setError(errorMessage);
+        showError(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -148,15 +152,19 @@ function Leads() {
       if (editingLead) {
         // Update existing lead
         await api.patch(`/leads/${editingLead.id}/`, formData);
+        showSuccess('Lead updated successfully! ✅');
       } else {
         // Create new lead
         await api.post('/leads/', formData);
+        showSuccess('Lead created successfully! 🎉');
       }
       
       handleCloseModal();
       fetchLeads(); // Refresh the list
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save lead');
+      const errorMessage = err.response?.data?.detail || 'Failed to save lead';
+      setError(errorMessage);
+      showError(errorMessage);
     }
   };
 
@@ -170,11 +178,14 @@ function Leads() {
 
     try {
       await api.delete(`/leads/${leadToDelete.id}/`);
+      showSuccess(`Lead "${leadToDelete.title}" deleted successfully! 🗑️`);
       setShowDeleteModal(false);
       setLeadToDelete(null);
       fetchLeads(); // Refresh the list
     } catch (err) {
-      setError('Failed to delete lead');
+      const errorMessage = err.response?.data?.detail || 'Failed to delete lead';
+      setError(errorMessage);
+      showError(errorMessage);
       setShowDeleteModal(false);
     }
   };
