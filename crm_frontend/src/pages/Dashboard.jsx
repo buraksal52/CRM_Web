@@ -34,10 +34,11 @@ function Dashboard() {
     setError('');
 
     try {
+      // Fetch all data with limit parameter for accurate statistics
       const [customersRes, leadsRes, tasksRes] = await Promise.all([
-        api.get('/customers/'),
-        api.get('/leads/'),
-        api.get('/tasks/'),
+        api.get('/customers/?limit=1000'),
+        api.get('/leads/?limit=1000'),
+        api.get('/tasks/?limit=1000'),
       ]);
 
       // Handle both paginated and non-paginated responses
@@ -238,6 +239,7 @@ function Dashboard() {
             </h3>
             <div style={{ height: '300px' }}>
               <Bar
+                key={`bar-${stats.totalCustomers}-${stats.totalLeads}-${stats.totalTasks}`}
                 data={{
                   labels: ['Customers', 'Leads', 'Tasks'],
                   datasets: [{
@@ -269,6 +271,7 @@ function Dashboard() {
             <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {stats.totalTasks > 0 ? (
                 <Doughnut
+                  key={`doughnut-${stats.completedTasks}-${stats.pendingTasks}`}
                   data={{
                     labels: ['Completed', 'Pending'],
                     datasets: [{
