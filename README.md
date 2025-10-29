@@ -1,6 +1,6 @@
-# CRM Application
+# FlowCRM
 
-Modern ve profesyonel bir Müşteri İlişkileri Yönetim (CRM) sistemi.
+Modern, hızlı, minimal ve profesyonel bir CRM sistemi.
 
 ## 🚀 Özellikler
 
@@ -17,7 +17,7 @@ Modern ve profesyonel bir Müşteri İlişkileri Yönetim (CRM) sistemi.
 ### Backend
 - **Django 4.2+**: Python web framework
 - **Django REST Framework**: RESTful API
-- **SQLite**: Veritaşbanı
+- **SQLite**: Veritabanı
 - **JWT Authentication**: rest_framework_simplejwt
 - **drf-yasg**: API dokümantasyonu
 
@@ -179,77 +179,6 @@ CRM/
 - Güvenli HTTP headers
 - Input validasyonu
 
-## � Deployment
-
-### Frontend (Netlify)
-
-Frontend Netlify'da deploy edilmeye hazır hale getirilmiştir.
-
-**Hızlı Deployment:**
-1. GitHub'a push edin
-2. Netlify Dashboard → "New site from Git"
-3. Repository seçin: `CRM_Web`
-4. Build ayarları:
-   - Base directory: `crm_frontend`
-   - Build command: `npm run build`
-   - Publish directory: `dist`
-5. Environment variables:
-   - `VITE_API_URL` = Backend API URL'iniz
-6. Deploy!
-
-**Dosyalar:**
-- ✅ `crm_frontend/netlify.toml` - Netlify yapılandırması
-- ✅ `crm_frontend/public/_redirects` - SPA routing için redirect kuralları
-
-### Backend (Production)
-
-Production için önerilen deployment seçenekleri:
-
-**1. Heroku:**
-```bash
-# Procfile oluşturun
-web: gunicorn crm_project.wsgi
-
-# requirements.txt güncelleyin
-pip freeze > requirements.txt
-
-# Deploy edin
-heroku create your-crm-backend
-git push heroku main
-```
-
-**2. Railway / Render:**
-- GitHub repository bağlayın
-- Build command: `pip install -r requirements.txt`
-- Start command: `gunicorn crm_project.wsgi`
-- Environment variables ekleyin
-
-**Önemli Production Ayarları:**
-
-`settings.py` değişiklikleri:
-```python
-DEBUG = False
-ALLOWED_HOSTS = ['your-backend-domain.com']
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-# PostgreSQL
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': '5432',
-    }
-}
-
-# CORS - Netlify domain ekleyin
-CORS_ALLOWED_ORIGINS = [
-    "https://your-site.netlify.app",
-]
-```
-
 ## �📝 Geliştirme Notları
 
 - Backend API `http://localhost:8000` adresinde çalışır
@@ -264,10 +193,6 @@ CORS_ALLOWED_ORIGINS = [
 3. Değişikliklerinizi commit edin (`git commit -m 'feat: Add amazing feature'`)
 4. Branch'inizi push edin (`git push origin feature/amazing-feature`)
 5. Pull Request oluşturun
-
-## 📄 Lisans
-
-Bu proje özel bir projedir.
 
 ## 👤 İletişim
 
