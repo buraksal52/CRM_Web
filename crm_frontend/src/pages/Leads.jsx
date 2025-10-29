@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { isAdmin } from '../utils/auth';
+import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmModal from '../components/ConfirmModal';
 import { showSuccess, showError } from '../utils/toast';
@@ -29,7 +30,6 @@ function Leads() {
   const navigate = useNavigate();
   const userIsAdmin = isAdmin();
 
-  // Fetch leads and customers on component mount
   useEffect(() => {
     fetchCustomers();
     fetchLeads();
@@ -38,7 +38,7 @@ function Leads() {
   const fetchCustomers = async () => {
     try {
       const response = await api.get('/customers/');
-      setCustomers(response.data);
+      setCustomers(response.data.results || response.data);
     } catch (err) {
       console.error('Failed to fetch customers:', err);
     }
@@ -70,7 +70,6 @@ function Leads() {
       setLeads(response.data.results || response.data);
       setTotalCount(response.data.count || response.data.length);
       
-      // Calculate total pages
       if (response.data.count) {
         setTotalPages(Math.ceil(response.data.count / 10));
       }
@@ -105,7 +104,6 @@ function Leads() {
 
   const handleOpenModal = (lead = null) => {
     if (lead) {
-      // Edit mode
       setEditingLead(lead);
       setFormData({
         title: lead.title,
@@ -114,7 +112,6 @@ function Leads() {
         status: lead.status,
       });
     } else {
-      // Create mode
       setEditingLead(null);
       setFormData({
         title: '',
@@ -138,9 +135,10 @@ function Leads() {
   };
 
   const handleFormChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
   };
 
@@ -150,17 +148,15 @@ function Leads() {
 
     try {
       if (editingLead) {
-        // Update existing lead
         await api.patch(`/leads/${editingLead.id}/`, formData);
-        showSuccess('Lead updated successfully! ✅');
+        showSuccess('Lead updated successfully!');
       } else {
-        // Create new lead
         await api.post('/leads/', formData);
-        showSuccess('Lead created successfully! 🎉');
+        showSuccess('Lead created successfully!');
       }
       
       handleCloseModal();
-      fetchLeads(); // Refresh the list
+      fetchLeads();
     } catch (err) {
       const errorMessage = err.response?.data?.detail || 'Failed to save lead';
       setError(errorMessage);
@@ -178,10 +174,10 @@ function Leads() {
 
     try {
       await api.delete(`/leads/${leadToDelete.id}/`);
-      showSuccess(`Lead "${leadToDelete.title}" deleted successfully! 🗑️`);
+      showSuccess(`Lead deleted successfully!`);
       setShowDeleteModal(false);
       setLeadToDelete(null);
-      fetchLeads(); // Refresh the list
+      fetchLeads();
     } catch (err) {
       const errorMessage = err.response?.data?.detail || 'Failed to delete lead';
       setError(errorMessage);
@@ -190,80 +186,118 @@ function Leads() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    navigate('/login');
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Open':
+        return { bg: 'rgba(30, 64, 175, 0.1)', color: 'var(--primary)', border: 'var(--primary)' };
+      case 'Won':
+        return { bg: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)', border: 'var(--success)' };
+      case 'Lost':
+        return { bg: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', border: 'var(--danger)' };
+      default:
+        return { bg: 'rgba(107, 114, 128, 0.1)', color: 'var(--text-tertiary)', border: 'var(--text-tertiary)' };
+    }
   };
 
   const getCustomerName = (customerId) => {
     const customer = customers.find(c => c.id === customerId);
-    return customer ? customer.name : 'Unknown';
+    return customer ? customer.name : `Customer #${customerId}`;
   };
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(value);
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value || 0);
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  if (loading) {
+    return (
+      <Layout>
+        <LoadingSpinner text="Loading leads..." />
+      </Layout>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="text-blue-500 hover:text-blue-700 font-semibold"
-            >
-              ← Back to Dashboard
-            </button>
-            <h1 className="text-2xl font-bold text-gray-800">Leads</h1>
+    <Layout>
+      <div className="fade-in-up">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+              Leads
+            </h1>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Track and manage your sales opportunities ({totalCount} total)
+            </p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
-          >
-            Logout
-          </button>
+          {userIsAdmin && (
+            <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+              <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Lead
+            </button>
+          )}
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="fade-in" style={{
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 'var(--border-radius)',
+            color: 'var(--danger)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
             {error}
           </div>
         )}
 
-        {/* Search and Filters */}
-        <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex-1 min-w-[200px]">
+        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <svg style={{ width: '1.25rem', height: '1.25rem', color: 'var(--text-tertiary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
               <input
                 type="text"
-                placeholder="Search by title..."
+                placeholder="Search leads by title..."
                 value={searchQuery}
                 onChange={handleSearchChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--text-primary)',
+                  fontSize: '1rem',
+                  outline: 'none'
+                }}
               />
             </div>
-            <div className="min-w-[150px]">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <label style={{ fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>Status:</label>
               <select
                 value={statusFilter}
                 onChange={handleStatusFilterChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '0.5rem',
+                  background: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.875rem',
+                  cursor: 'pointer'
+                }}
               >
                 <option value="">All Status</option>
                 <option value="Open">Open</option>
@@ -271,261 +305,305 @@ function Leads() {
                 <option value="Lost">Lost</option>
               </select>
             </div>
-            {userIsAdmin && (
-              <button
-                onClick={() => handleOpenModal()}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded whitespace-nowrap"
-              >
-                + Create Lead
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Leads Table */}
-        {loading ? (
-          <LoadingSpinner text="Loading leads..." />
-        ) : leads.length === 0 ? (
-          <div className="bg-white p-8 rounded-lg shadow-md text-center">
-            <p className="text-gray-600">No leads found.</p>
+        {leads.length === 0 ? (
+          <div className="card fade-in" style={{ padding: '3rem', textAlign: 'center' }}>
+            <div style={{
+              width: '4rem',
+              height: '4rem',
+              margin: '0 auto 1rem',
+              borderRadius: '50%',
+              background: 'rgba(30, 64, 175, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <svg style={{ width: '2rem', height: '2rem', color: 'var(--primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+              {searchQuery || statusFilter ? 'No leads found' : 'No leads yet'}
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              {searchQuery || statusFilter ? 'Try adjusting your filters' : 'Create your first lead to get started'}
+            </p>
+            {userIsAdmin && !searchQuery && !statusFilter && (
+              <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+                Create Lead
+              </button>
+            )}
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-md overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Value
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
-                  </th>
-                  {userIsAdmin && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {lead.title}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {getCustomerName(lead.customer)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                      {formatCurrency(lead.value)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          lead.status === 'Open'
-                            ? 'bg-blue-100 text-blue-800'
-                            : lead.status === 'Won'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {lead.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(lead.created_at)}
-                    </td>
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            {leads.map((lead, index) => {
+              const statusStyle = getStatusColor(lead.status);
+              return (
+                <div 
+                  key={lead.id} 
+                  className="card fade-in-up" 
+                  style={{ 
+                    padding: '1.5rem',
+                    animationDelay: `${index * 0.05}s`,
+                    borderLeft: `4px solid ${statusStyle.border}`
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '250px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                        <h3 style={{
+                          fontSize: '1.125rem',
+                          fontWeight: '600',
+                          color: 'var(--text-primary)',
+                          flex: 1
+                        }}>
+                          {lead.title}
+                        </h3>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          padding: '0.375rem 0.75rem',
+                          borderRadius: '0.375rem',
+                          background: statusStyle.bg,
+                          color: statusStyle.color,
+                          fontWeight: '600',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {lead.status}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
+                          <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          {getCustomerName(lead.customer)}
+                        </div>
+                        {lead.value && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--success)', fontSize: '0.875rem', fontWeight: '600' }}>
+                            <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {formatCurrency(lead.value)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     {userIsAdmin && (
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
                           onClick={() => handleOpenModal(lead)}
-                          className="text-blue-600 hover:text-blue-900 font-medium"
+                          className="btn"
+                          style={{
+                            padding: '0.5rem',
+                            background: 'transparent',
+                            color: 'var(--primary)',
+                            border: '1px solid var(--border-color)'
+                          }}
+                          title="Edit"
                         >
-                          Edit
+                          <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
                         </button>
                         <button
                           onClick={() => handleDelete(lead)}
-                          className="text-red-600 hover:text-red-900 font-medium"
+                          className="btn"
+                          style={{
+                            padding: '0.5rem',
+                            background: 'transparent',
+                            color: 'var(--danger)',
+                            border: '1px solid var(--border-color)'
+                          }}
+                          title="Delete"
                         >
-                          Delete
+                          <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                         </button>
-                      </td>
+                      </div>
                     )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        {/* Pagination Controls */}
-        {!loading && leads.length > 0 && totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
-            <div className="text-sm text-gray-700">
-              Showing page <span className="font-medium">{currentPage}</span> of{' '}
-              <span className="font-medium">{totalPages}</span> ({totalCount} total leads)
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              
-              {/* Page Numbers */}
-              <div className="flex gap-1">
-                {/* First Page */}
-                {currentPage > 2 && (
-                  <>
-                    <button
-                      onClick={() => handlePageChange(1)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      1
-                    </button>
-                    {currentPage > 3 && (
-                      <span className="px-2 py-2 text-gray-500">...</span>
-                    )}
-                  </>
-                )}
-                
-                {/* Previous Page */}
-                {currentPage > 1 && (
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    {currentPage - 1}
-                  </button>
-                )}
-                
-                {/* Current Page */}
-                <button
-                  className="px-3 py-2 border-2 border-blue-500 rounded-lg text-sm font-medium text-blue-600 bg-blue-50"
-                  disabled
-                >
-                  {currentPage}
-                </button>
-                
-                {/* Next Page */}
-                {currentPage < totalPages && (
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    {currentPage + 1}
-                  </button>
-                )}
-                
-                {/* Last Page */}
-                {currentPage < totalPages - 1 && (
-                  <>
-                    {currentPage < totalPages - 2 && (
-                      <span className="px-2 py-2 text-gray-500">...</span>
-                    )}
-                    <button
-                      onClick={() => handlePageChange(totalPages)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-              </div>
+        {totalPages > 1 && (
+          <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="btn"
+              style={{
+                padding: '0.5rem 1rem',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                opacity: currentPage === 1 ? 0.5 : 1,
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Previous
+            </button>
+            
+            <span style={{ padding: '0.5rem 1rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
+              Page {currentPage} of {totalPages}
+            </span>
 
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="btn"
+              style={{
+                padding: '0.5rem 1rem',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                opacity: currentPage === totalPages ? 0.5 : 1,
+                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Next
+            </button>
           </div>
         )}
       </div>
 
-      {/* Modal for Create/Edit */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-6">
-              {editingLead ? 'Edit Lead' : 'Create Lead'}
-            </h2>
-            
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }} onClick={handleCloseModal}>
+          <div className="card scale-in" style={{
+            maxWidth: '500px',
+            width: '100%',
+            padding: '2rem',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                {editingLead ? 'Edit Lead' : 'Create New Lead'}
+              </h2>
+              <button onClick={handleCloseModal} style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-tertiary)',
+                cursor: 'pointer',
+                padding: '0.25rem'
+              }}>
+                <svg style={{ width: '1.5rem', height: '1.5rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
             <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-gray-700 font-semibold mb-2">
-                  Title
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label htmlFor="title" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  Title *
                 </label>
                 <input
                   type="text"
+                  id="title"
                   name="title"
                   value={formData.title}
                   onChange={handleFormChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter lead title"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '1rem'
+                  }}
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 font-semibold mb-2">
-                  Customer
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label htmlFor="customer" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  Customer *
                 </label>
                 <select
+                  id="customer"
                   name="customer"
                   value={formData.customer}
                   onChange={handleFormChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '1rem',
+                    cursor: 'pointer'
+                  }}
                 >
                   <option value="">Select a customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} - {customer.company}
-                    </option>
+                  {customers.map(customer => (
+                    <option key={customer.id} value={customer.id}>{customer.name}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 font-semibold mb-2">
-                  Value ($)
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label htmlFor="value" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  Value (USD)
                 </label>
                 <input
                   type="number"
+                  id="value"
                   name="value"
                   value={formData.value}
                   onChange={handleFormChange}
-                  required
                   step="0.01"
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="0.00"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '1rem'
+                  }}
                 />
               </div>
 
-              <div className="mb-6">
-                <label className="block text-gray-700 font-semibold mb-2">
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label htmlFor="status" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                   Status
                 </label>
                 <select
+                  id="status"
                   name="status"
                   value={formData.status}
                   onChange={handleFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '1rem',
+                    cursor: 'pointer'
+                  }}
                 >
                   <option value="Open">Open</option>
                   <option value="Won">Won</option>
@@ -533,19 +611,26 @@ function Leads() {
                 </select>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                  className="btn"
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: 'transparent',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-color)'
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+                  className="btn btn-primary"
+                  style={{ padding: '0.75rem 1.5rem' }}
                 >
-                  {editingLead ? 'Update' : 'Create'}
+                  {editingLead ? 'Update Lead' : 'Create Lead'}
                 </button>
               </div>
             </form>
@@ -553,18 +638,20 @@ function Leads() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={confirmDelete}
-        title="Delete Lead"
-        message={`Are you sure you want to delete "${leadToDelete?.title}"? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        type="danger"
-      />
-    </div>
+      {showDeleteModal && (
+        <ConfirmModal
+          isOpen={showDeleteModal}
+          title="Delete Lead"
+          message={`Are you sure you want to delete the lead "${leadToDelete?.title}"? This action cannot be undone.`}
+          confirmText="Delete"
+          onConfirm={confirmDelete}
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setLeadToDelete(null);
+          }}
+        />
+      )}
+    </Layout>
   );
 }
 

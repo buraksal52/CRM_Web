@@ -1,40 +1,16 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import { getUserRole, getUsername } from '../utils/auth';
+import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
-import Card from '../components/Card';
-import DarkModeToggle from '../components/DarkModeToggle';
-import { useDarkMode } from '../hooks/useDarkMode';
-import { showSuccess, showError, showInfo } from '../utils/toast';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import { showError } from '../utils/toast';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
 function Dashboard() {
   const navigate = useNavigate();
-  const userRole = getUserRole();
-  const username = getUsername();
-  const [isDarkMode, toggleDarkMode] = useDarkMode();
   const [stats, setStats] = useState({
     totalCustomers: 0,
     activeCustomers: 0,
@@ -58,17 +34,16 @@ function Dashboard() {
     setError('');
 
     try {
-      // Fetch all data in parallel
       const [customersRes, leadsRes, tasksRes] = await Promise.all([
         api.get('/customers/'),
         api.get('/leads/'),
         api.get('/tasks/'),
       ]);
 
-      // Calculate statistics from the responses
-      const customers = customersRes.data;
-      const leads = leadsRes.data;
-      const tasks = tasksRes.data;
+      // Handle both paginated and non-paginated responses
+      const customers = customersRes.data.results || customersRes.data || [];
+      const leads = leadsRes.data.results || leadsRes.data || [];
+      const tasks = tasksRes.data.results || tasksRes.data || [];
 
       setStats({
         totalCustomers: customers.length,
@@ -94,548 +69,269 @@ function Dashboard() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    showInfo('Logged out successfully. See you soon! 👋');
-    navigate('/login');
-  };
+  if (loading) {
+    return (
+      <Layout>
+        <LoadingSpinner text="Loading dashboard..." />
+      </Layout>
+    );
+  }
 
   return (
-    <div className="min-h-screen" style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)' }}>
-      {/* Modern Header with Gradient */}
-      <div className="relative" style={{ 
-        background: 'linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(10, 10, 10, 0.95) 100%)',
-        backdropFilter: 'blur(10px)',
-        borderBottom: '2px solid rgba(255, 215, 0, 0.3)',
-        boxShadow: '0 4px 20px rgba(255, 215, 0, 0.1)'
-      }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{
-                background: 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)',
-                boxShadow: '0 0 20px rgba(255, 215, 0, 0.4)'
+    <Layout>
+      <div className="fade-in-up">
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+            Dashboard
+          </h1>
+          <p style={{ color: 'var(--text-secondary)' }}>
+            Welcome back! Here is what is happening with your business today.
+          </p>
+        </div>
+
+        {error && (
+          <div className="fade-in" style={{
+            padding: '1rem',
+            marginBottom: '2rem',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 'var(--border-radius)',
+            color: 'var(--danger)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            {error}
+          </div>
+        )}
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '1.5rem',
+          marginBottom: '2rem'
+        }}>
+          <div className="card scale-in" style={{ padding: '1.5rem', cursor: 'pointer' }}
+            onClick={() => navigate('/customers')}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <div>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '600' }}>
+                  CUSTOMERS
+                </p>
+                <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'var(--primary)' }}>
+                  {stats.totalCustomers}
+                </h2>
+              </div>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                borderRadius: '0.75rem',
+                background: 'rgba(30, 64, 175, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}>
-                <svg className="w-7 h-7 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <svg style={{ width: '1.75rem', height: '1.75rem', color: 'var(--primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--success)', fontWeight: '600' }}>
+                {stats.activeCustomers} Active
+              </span>
+              <span style={{ fontSize: '0.875rem', color: 'var(--text-tertiary)' }}>
+                {stats.totalCustomers - stats.activeCustomers} Inactive
+              </span>
+            </div>
+          </div>
+
+          <div className="card scale-in" style={{ padding: '1.5rem', cursor: 'pointer', animationDelay: '0.1s' }}
+            onClick={() => navigate('/leads')}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
               <div>
-                <h1 className="text-3xl font-bold" style={{
-                  background: 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
-                }}>
-                  CRM Dashboard
-                </h1>
-                <p className="text-sm mt-1" style={{ color: '#cccccc' }}>
-                  Welcome back, <span className="font-semibold" style={{ color: '#FFD700' }}>{username}</span>
-                  {userRole && (
-                    <span className="ml-2 px-3 py-1 text-xs font-bold rounded-full" style={{
-                      background: userRole === 'admin' 
-                        ? 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)'
-                        : 'rgba(255, 215, 0, 0.2)',
-                      color: userRole === 'admin' ? '#000' : '#FFD700',
-                      border: '1px solid rgba(255, 215, 0, 0.3)'
-                    }}>
-                      {userRole === 'admin' ? '⚡ ADMIN' : '👤 USER'}
-                    </span>
-                  )}
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '600' }}>
+                  LEADS
                 </p>
+                <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'var(--primary)' }}>
+                  {stats.totalLeads}
+                </h2>
+              </div>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                borderRadius: '0.75rem',
+                background: 'rgba(16, 185, 129, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <svg style={{ width: '1.75rem', height: '1.75rem', color: 'var(--success)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleLogout}
-                className="px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-200 hover:scale-105"
-                style={{
-                  background: 'rgba(255, 215, 0, 0.1)',
-                  border: '2px solid #FFD700',
-                  color: '#FFD700',
-                  boxShadow: '0 0 15px rgba(255, 215, 0, 0.2)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)';
-                  e.currentTarget.style.color = '#000';
-                  e.currentTarget.style.boxShadow = '0 0 25px rgba(255, 215, 0, 0.5)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 215, 0, 0.1)';
-                  e.currentTarget.style.color = '#FFD700';
-                  e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.2)';
-                }}
-              >
-                🚪 Logout
-              </button>
+            <div style={{ display: 'flex', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', fontSize: '0.875rem' }}>
+              <span style={{ color: 'var(--primary)', fontWeight: '600' }}>Open: {stats.openLeads}</span>
+              <span style={{ color: 'var(--success)', fontWeight: '600' }}>Won: {stats.wonLeads}</span>
+              <span style={{ color: 'var(--text-tertiary)' }}>Lost: {stats.lostLeads}</span>
+            </div>
+          </div>
+
+          <div className="card scale-in" style={{ padding: '1.5rem', cursor: 'pointer', animationDelay: '0.2s' }}
+            onClick={() => navigate('/tasks')}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <div>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: '600' }}>
+                  TASKS
+                </p>
+                <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'var(--primary)' }}>
+                  {stats.totalTasks}
+                </h2>
+              </div>
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                borderRadius: '0.75rem',
+                background: 'rgba(245, 158, 11, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <svg style={{ width: '1.75rem', height: '1.75rem', color: 'var(--warning)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+            </div>
+            <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '0.875rem' }}>
+                <span style={{ color: 'var(--success)', fontWeight: '600' }}>Completed: {stats.completedTasks}</span>
+                <span style={{ color: 'var(--warning)', fontWeight: '600' }}>Pending: {stats.pendingTasks}</span>
+              </div>
+              {stats.totalTasks > 0 && (
+                <div>
+                  <div style={{ width: '100%', height: '0.5rem', background: 'var(--bg-tertiary)', borderRadius: '1rem', overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${(stats.completedTasks / stats.totalTasks) * 100}%`,
+                      height: '100%',
+                      background: 'linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%)',
+                      borderRadius: '1rem',
+                      transition: 'width 0.5s ease'
+                    }} />
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.5rem', textAlign: 'center' }}>
+                    {Math.round((stats.completedTasks / stats.totalTasks) * 100)}% Complete
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="px-6 py-4 rounded-xl mb-6 animate-pulse" style={{
-            background: 'rgba(244, 67, 54, 0.1)',
-            border: '2px solid rgba(244, 67, 54, 0.3)',
-            color: '#ff6b6b',
-            boxShadow: '0 0 20px rgba(244, 67, 54, 0.2)'
-          }}>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">⚠️</span>
-              <span className="font-semibold">{error}</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+          <div className="card fade-in" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem', color: 'var(--text-primary)' }}>
+              System Overview
+            </h3>
+            <div style={{ height: '300px' }}>
+              <Bar
+                data={{
+                  labels: ['Customers', 'Leads', 'Tasks'],
+                  datasets: [{
+                    label: 'Total Count',
+                    data: [stats.totalCustomers, stats.totalLeads, stats.totalTasks],
+                    backgroundColor: ['rgba(30, 64, 175, 0.8)', 'rgba(16, 185, 129, 0.8)', 'rgba(245, 158, 11, 0.8)'],
+                    borderColor: ['var(--primary)', 'var(--success)', 'var(--warning)'],
+                    borderWidth: 2,
+                    borderRadius: 8,
+                  }],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'var(--border-color)' } },
+                    x: { grid: { display: false } },
+                  },
+                }}
+              />
             </div>
           </div>
-        )}
 
-        {loading ? (
-          <LoadingSpinner text="Loading dashboard..." />
-        ) : (
-          <>
-            {/* Summary Stats Cards - Modern Black & Yellow */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {/* Customers Card */}
-              <div 
-                className="group cursor-pointer rounded-2xl p-6 transition-all duration-300 hover:scale-105"
-                onClick={() => navigate('/customers')}
-                style={{
-                  background: 'rgba(26, 26, 26, 0.9)',
-                  backdropFilter: 'blur(10px)',
-                  border: '2px solid rgba(255, 215, 0, 0.2)',
-                  boxShadow: '0 8px 32px rgba(255, 215, 0, 0.1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.5)';
-                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(255, 215, 0, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.2)';
-                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(255, 215, 0, 0.1)';
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold" style={{ color: '#cccccc' }}>Customers</h3>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{
-                    background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.1) 100%)',
-                    border: '1px solid rgba(255, 215, 0, 0.3)'
-                  }}>
-                    <svg className="w-6 h-6" fill="none" stroke="#FFD700" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <p className="text-5xl font-black mb-2" style={{ color: '#FFD700' }}>{stats.totalCustomers}</p>
-                  <p className="text-sm" style={{ color: '#999999' }}>Total Customers</p>
-                </div>
-                <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid rgba(255, 215, 0, 0.1)' }}>
-                  <span className="text-sm font-semibold" style={{ color: '#4ade80' }}>
-                    ✓ {stats.activeCustomers} Active
-                  </span>
-                  <span className="text-sm" style={{ color: '#999999' }}>
-                    {stats.totalCustomers - stats.activeCustomers} Inactive
-                  </span>
-                </div>
-              </div>
-
-              {/* Leads Card */}
-              <div 
-                className="group cursor-pointer rounded-2xl p-6 transition-all duration-300 hover:scale-105"
-                onClick={() => navigate('/leads')}
-                style={{
-                  background: 'rgba(26, 26, 26, 0.9)',
-                  backdropFilter: 'blur(10px)',
-                  border: '2px solid rgba(255, 215, 0, 0.2)',
-                  boxShadow: '0 8px 32px rgba(255, 215, 0, 0.1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.5)';
-                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(255, 215, 0, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.2)';
-                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(255, 215, 0, 0.1)';
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold" style={{ color: '#cccccc' }}>Leads</h3>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{
-                    background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.1) 100%)',
-                    border: '1px solid rgba(255, 215, 0, 0.3)'
-                  }}>
-                    <svg className="w-6 h-6" fill="none" stroke="#FFD700" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <p className="text-5xl font-black mb-2" style={{ color: '#FFD700' }}>{stats.totalLeads}</p>
-                  <p className="text-sm" style={{ color: '#999999' }}>Total Leads</p>
-                </div>
-                <div className="space-y-2 pt-4" style={{ borderTop: '1px solid rgba(255, 215, 0, 0.1)' }}>
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: '#60a5fa' }}>📂 Open:</span>
-                    <span className="font-bold" style={{ color: '#fff' }}>{stats.openLeads}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: '#4ade80' }}>✓ Won:</span>
-                    <span className="font-bold" style={{ color: '#fff' }}>{stats.wonLeads}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: '#f87171' }}>✗ Lost:</span>
-                    <span className="font-bold" style={{ color: '#fff' }}>{stats.lostLeads}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tasks Card */}
-              <div 
-                className="group cursor-pointer rounded-2xl p-6 transition-all duration-300 hover:scale-105"
-                onClick={() => navigate('/tasks')}
-                style={{
-                  background: 'rgba(26, 26, 26, 0.9)',
-                  backdropFilter: 'blur(10px)',
-                  border: '2px solid rgba(255, 215, 0, 0.2)',
-                  boxShadow: '0 8px 32px rgba(255, 215, 0, 0.1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.5)';
-                  e.currentTarget.style.boxShadow = '0 12px 40px rgba(255, 215, 0, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.2)';
-                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(255, 215, 0, 0.1)';
-                }}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold" style={{ color: '#cccccc' }}>Tasks</h3>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{
-                    background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.1) 100%)',
-                    border: '1px solid rgba(255, 215, 0, 0.3)'
-                  }}>
-                    <svg className="w-6 h-6" fill="none" stroke="#FFD700" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <p className="text-5xl font-black mb-2" style={{ color: '#FFD700' }}>{stats.totalTasks}</p>
-                  <p className="text-sm" style={{ color: '#999999' }}>Total Tasks</p>
-                </div>
-                <div className="pt-4" style={{ borderTop: '1px solid rgba(255, 215, 0, 0.1)' }}>
-                  <div className="flex items-center justify-between mb-3 text-sm">
-                    <span className="font-semibold" style={{ color: '#4ade80' }}>
-                      ✓ {stats.completedTasks} Done
-                    </span>
-                    <span className="font-semibold" style={{ color: '#fb923c' }}>
-                      ⏳ {stats.pendingTasks} Pending
-                    </span>
-                  </div>
-                  {stats.totalTasks > 0 && (
-                    <div>
-                      <div className="w-full rounded-full h-2.5 overflow-hidden" style={{ background: 'rgba(255, 215, 0, 0.1)' }}>
-                        <div
-                          className="h-2.5 rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${(stats.completedTasks / stats.totalTasks) * 100}%`,
-                            background: 'linear-gradient(90deg, #FFD700 0%, #FFC700 100%)',
-                            boxShadow: '0 0 10px rgba(255, 215, 0, 0.5)'
-                          }}
-                        ></div>
-                      </div>
-                      <p className="text-xs text-center mt-2" style={{ color: '#999999' }}>
-                        {Math.round((stats.completedTasks / stats.totalTasks) * 100)}% Complete
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+          <div className="card fade-in" style={{ padding: '1.5rem', animationDelay: '0.1s' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1.5rem', color: 'var(--text-primary)' }}>
+              Task Progress
+            </h3>
+            <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {stats.totalTasks > 0 ? (
+                <Doughnut
+                  data={{
+                    labels: ['Completed', 'Pending'],
+                    datasets: [{
+                      data: [stats.completedTasks, stats.pendingTasks],
+                      backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(245, 158, 11, 0.8)'],
+                      borderColor: ['var(--success)', 'var(--warning)'],
+                      borderWidth: 2,
+                    }],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { position: 'bottom', labels: { padding: 20, font: { size: 12 } } },
+                    },
+                  }}
+                />
+              ) : (
+                <p style={{ color: 'var(--text-tertiary)' }}>No tasks available</p>
+              )}
             </div>
+          </div>
+        </div>
 
-            {/* Quick Actions - Modern Style */}
-            <div className="rounded-2xl p-6 mb-8" style={{
-              background: 'rgba(26, 26, 26, 0.9)',
-              backdropFilter: 'blur(10px)',
-              border: '2px solid rgba(255, 215, 0, 0.2)',
-              boxShadow: '0 8px 32px rgba(255, 215, 0, 0.1)'
-            }}>
-              <h2 className="text-2xl font-bold mb-6" style={{
-                background: 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
-              }}>
-                ⚡ Quick Actions
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <button
-                  onClick={() => navigate('/customers')}
-                  className="py-4 px-6 rounded-xl font-bold transition-all duration-200 hover:scale-105"
-                  style={{
-                    background: 'rgba(255, 215, 0, 0.1)',
-                    border: '2px solid rgba(255, 215, 0, 0.3)',
-                    color: '#FFD700'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)';
-                    e.currentTarget.style.color = '#000';
-                    e.currentTarget.style.boxShadow = '0 0 25px rgba(255, 215, 0, 0.5)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 215, 0, 0.1)';
-                    e.currentTarget.style.color = '#FFD700';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  👥 Add New Customer
-                </button>
-                <button
-                  onClick={() => navigate('/leads')}
-                  className="py-4 px-6 rounded-xl font-bold transition-all duration-200 hover:scale-105"
-                  style={{
-                    background: 'rgba(255, 215, 0, 0.1)',
-                    border: '2px solid rgba(255, 215, 0, 0.3)',
-                    color: '#FFD700'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)';
-                    e.currentTarget.style.color = '#000';
-                    e.currentTarget.style.boxShadow = '0 0 25px rgba(255, 215, 0, 0.5)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 215, 0, 0.1)';
-                    e.currentTarget.style.color = '#FFD700';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  📊 Create New Lead
-                </button>
-                <button
-                  onClick={() => navigate('/tasks')}
-                  className="py-4 px-6 rounded-xl font-bold transition-all duration-200 hover:scale-105"
-                  style={{
-                    background: 'rgba(255, 215, 0, 0.1)',
-                    border: '2px solid rgba(255, 215, 0, 0.3)',
-                    color: '#FFD700'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)';
-                    e.currentTarget.style.color = '#000';
-                    e.currentTarget.style.boxShadow = '0 0 25px rgba(255, 215, 0, 0.5)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 215, 0, 0.1)';
-                    e.currentTarget.style.color = '#FFD700';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  ✓ Add New Task
-                </button>
-              </div>
-            </div>
-
-            {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-              {/* Overview Bar Chart */}
-              <Card title="System Overview" subtitle="Total counts across all modules">
-                <div className="h-64 sm:h-72">
-                  <Bar
-                    data={{
-                      labels: ['Customers', 'Leads', 'Tasks'],
-                      datasets: [
-                        {
-                          label: 'Total Count',
-                          data: [stats.totalCustomers, stats.totalLeads, stats.totalTasks],
-                          backgroundColor: [
-                            'rgba(59, 130, 246, 0.8)',  // Blue for Customers
-                            'rgba(34, 197, 94, 0.8)',   // Green for Leads
-                            'rgba(168, 85, 247, 0.8)',  // Purple for Tasks
-                          ],
-                          borderColor: [
-                            'rgb(59, 130, 246)',
-                            'rgb(34, 197, 94)',
-                            'rgb(168, 85, 247)',
-                          ],
-                          borderWidth: 2,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          display: false,
-                        },
-                        title: {
-                          display: false,
-                        },
-                        tooltip: {
-                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                          padding: 12,
-                          titleFont: {
-                            size: 14,
-                          },
-                          bodyFont: {
-                            size: 13,
-                          },
-                        },
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          ticks: {
-                            precision: 0,
-                          },
-                          grid: {
-                            color: 'rgba(0, 0, 0, 0.05)',
-                          },
-                        },
-                        x: {
-                          grid: {
-                            display: false,
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex justify-around text-xs sm:text-sm">
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                        <span className="text-gray-600 dark:text-gray-300">Customers</span>
-                      </div>
-                      <p className="font-bold text-gray-800 dark:text-white mt-1">{stats.totalCustomers}</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded"></div>
-                        <span className="text-gray-600 dark:text-gray-300">Leads</span>
-                      </div>
-                      <p className="font-bold text-gray-800 dark:text-white mt-1">{stats.totalLeads}</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-3 h-3 bg-purple-500 rounded"></div>
-                        <span className="text-gray-600 dark:text-gray-300">Tasks</span>
-                      </div>
-                      <p className="font-bold text-gray-800 dark:text-white mt-1">{stats.totalTasks}</p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Task Completion Doughnut Chart */}
-              <Card title="Task Progress" subtitle="Completed vs Pending tasks">
-                <div className="h-64 sm:h-72 flex items-center justify-center">
-                  {stats.totalTasks > 0 ? (
-                    <div className="w-full max-w-xs mx-auto">
-                      <Doughnut
-                        data={{
-                          labels: ['Completed', 'Pending'],
-                          datasets: [
-                            {
-                              label: 'Tasks',
-                              data: [stats.completedTasks, stats.pendingTasks],
-                              backgroundColor: [
-                                'rgba(34, 197, 94, 0.8)',   // Green for Completed
-                                'rgba(251, 146, 60, 0.8)',  // Orange for Pending
-                              ],
-                              borderColor: [
-                                'rgb(34, 197, 94)',
-                                'rgb(251, 146, 60)',
-                              ],
-                              borderWidth: 2,
-                            },
-                          ],
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: true,
-                          plugins: {
-                            legend: {
-                              position: 'bottom',
-                              labels: {
-                                padding: 15,
-                                font: {
-                                  size: 12,
-                                },
-                              },
-                            },
-                            tooltip: {
-                              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                              padding: 12,
-                              titleFont: {
-                                size: 14,
-                              },
-                              bodyFont: {
-                                size: 13,
-                              },
-                              callbacks: {
-                                label: function(context) {
-                                  const label = context.label || '';
-                                  const value = context.parsed || 0;
-                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                  const percentage = ((value / total) * 100).toFixed(1);
-                                  return `${label}: ${value} (${percentage}%)`;
-                                },
-                              },
-                            },
-                          },
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="text-center text-gray-500 dark:text-gray-400">
-                      <svg className="w-16 h-16 mx-auto mb-3 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      <p className="text-sm">No tasks available</p>
-                      <button
-                        onClick={() => navigate('/tasks')}
-                        className="mt-3 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 text-sm font-semibold"
-                      >
-                        Create your first task →
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {stats.totalTasks > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-2 mb-1">
-                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                          <span className="text-gray-600 dark:text-gray-300">Completed</span>
-                        </div>
-                        <p className="font-bold text-lg text-gray-800 dark:text-white">{stats.completedTasks}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0}%
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-2 mb-1">
-                          <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                          <span className="text-gray-600 dark:text-gray-300">Pending</span>
-                        </div>
-                        <p className="font-bold text-lg text-gray-800 dark:text-white">{stats.pendingTasks}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {stats.totalTasks > 0 ? Math.round((stats.pendingTasks / stats.totalTasks) * 100) : 0}%
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            </div>
-          </>
-        )}
+        <div className="card fade-in" style={{ padding: '1.5rem', marginTop: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem', color: 'var(--text-primary)' }}>
+            Quick Actions
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate('/customers')}
+              style={{ padding: '1rem', justifyContent: 'center' }}
+            >
+              <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Customer
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate('/leads')}
+              style={{ padding: '1rem', justifyContent: 'center' }}
+            >
+              <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Lead
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate('/tasks')}
+              style={{ padding: '1rem', justifyContent: 'center' }}
+            >
+              <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Task
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 

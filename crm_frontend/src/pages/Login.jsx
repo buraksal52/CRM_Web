@@ -1,23 +1,16 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+﻿import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { showSuccess, showError } from '../utils/toast';
 
 function Login() {
-  const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-    // Clear error when user types
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError('');
   };
 
@@ -27,16 +20,10 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await api.post('/login/', {
-        username: formData.username,
-        password: formData.password,
-      });
-
-      // Store tokens in localStorage
+      const response = await api.post('/login/', formData);
       localStorage.setItem('access_token', response.data.access);
       localStorage.setItem('refresh_token', response.data.refresh);
 
-      // Fetch user information including role
       try {
         const userResponse = await api.get('/user/me/');
         localStorage.setItem('user_role', userResponse.data.role);
@@ -46,20 +33,10 @@ function Login() {
         console.error('Failed to fetch user info:', userErr);
       }
 
-      showSuccess(`Welcome back, ${formData.username}! 👋`);
-      
-      // Redirect to dashboard
+      showSuccess(`Welcome back, ${formData.username}!`);
       navigate('/dashboard');
     } catch (err) {
-      // Handle error
-      let errorMessage;
-      if (err.response?.data?.detail) {
-        errorMessage = err.response.data.detail;
-      } else if (err.response?.status === 401) {
-        errorMessage = 'Invalid username or password';
-      } else {
-        errorMessage = 'An error occurred. Please try again.';
-      }
+      const errorMessage = err.response?.data?.detail || err.response?.status === 401 ? 'Invalid username or password' : 'An error occurred. Please try again.';
       setError(errorMessage);
       showError(errorMessage);
     } finally {
@@ -68,185 +45,49 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)'
-    }}>
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-72 h-72 rounded-full opacity-10" style={{
-          background: 'radial-gradient(circle, #FFD700 0%, transparent 70%)',
-          filter: 'blur(40px)',
-          animation: 'pulse 4s ease-in-out infinite'
-        }}></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 rounded-full opacity-10" style={{
-          background: 'radial-gradient(circle, #FFC700 0%, transparent 70%)',
-          filter: 'blur(60px)',
-          animation: 'pulse 6s ease-in-out infinite reverse'
-        }}></div>
-      </div>
-
-      <div className="relative w-full max-w-md">
-        {/* Glass Card */}
-        <div className="rounded-3xl p-8 md:p-10" style={{
-          background: 'rgba(26, 26, 26, 0.9)',
-          backdropFilter: 'blur(20px)',
-          border: '2px solid rgba(255, 215, 0, 0.2)',
-          boxShadow: '0 20px 60px rgba(255, 215, 0, 0.2)'
-        }}>
-          {/* Logo/Icon */}
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{
-              background: 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)',
-              boxShadow: '0 0 30px rgba(255, 215, 0, 0.5)'
-            }}>
-              <svg className="w-12 h-12 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+      <div style={{ width: '100%', maxWidth: '28rem' }}>
+        <div className="fade-in-up card" style={{ padding: '2.5rem', background: 'white', borderRadius: 'var(--border-radius-lg)', boxShadow: 'var(--shadow-xl)', border: '1px solid var(--border-color)' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', width: '4rem', height: '4rem', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)', borderRadius: '1rem', boxShadow: '0 8px 16px rgba(30, 64, 175, 0.2)' }}>
+              <svg className="scale-in" style={{ width: '2rem', height: '2rem', color: 'white' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
+            <h1 className="slide-in-right" style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Welcome Back</h1>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Sign in to your CRM account</p>
           </div>
 
-          <h2 className="text-4xl font-black text-center mb-3" style={{
-            background: 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>
-            Welcome Back
-          </h2>
-          <p className="text-center mb-8" style={{ color: '#999999' }}>
-            Login to your CRM account
-          </p>
-
           {error && (
-            <div className="mb-6 px-4 py-3 rounded-xl animate-pulse" style={{
-              background: 'rgba(244, 67, 54, 0.1)',
-              border: '2px solid rgba(244, 67, 54, 0.3)',
-              color: '#ff6b6b'
-            }}>
-              <div className="flex items-center gap-2">
-                <span>⚠️</span>
-                <span className="font-semibold">{error}</span>
-              </div>
+            <div className="fade-in" style={{ padding: '1rem', marginBottom: '1.5rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--border-radius)', color: 'var(--danger)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <svg style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }} fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div>
-              <label
-                htmlFor="username"
-                className="block font-bold mb-2"
-                style={{ color: '#FFD700' }}
-              >
-                Username
-              </label>
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: 'rgba(255, 215, 0, 0.05)',
-                  border: '2px solid rgba(255, 215, 0, 0.2)',
-                  color: '#ffffff',
-                  outline: 'none'
-                }}
-                placeholder="Enter your username"
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#FFD700';
-                  e.target.style.boxShadow = '0 0 20px rgba(255, 215, 0, 0.2)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255, 215, 0, 0.2)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
+              <label htmlFor="username" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Username</label>
+              <input type="text" id="username" name="username" value={formData.username} onChange={handleChange} required placeholder="Enter your username" style={{ width: '100%', padding: '0.75rem 1rem', fontSize: '0.95rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
             </div>
-
             <div>
-              <label
-                htmlFor="password"
-                className="block font-bold mb-2"
-                style={{ color: '#FFD700' }}
-              >
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: 'rgba(255, 215, 0, 0.05)',
-                  border: '2px solid rgba(255, 215, 0, 0.2)',
-                  color: '#ffffff',
-                  outline: 'none'
-                }}
-                placeholder="Enter your password"
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#FFD700';
-                  e.target.style.boxShadow = '0 0 20px rgba(255, 215, 0, 0.2)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255, 215, 0, 0.2)';
-                  e.target.style.boxShadow = 'none';
-                }}
-              />
+              <label htmlFor="password" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Password</label>
+              <input type="password" id="password" name="password" value={formData.password} onChange={handleChange} required placeholder="Enter your password" style={{ width: '100%', padding: '0.75rem 1rem', fontSize: '0.95rem', borderRadius: '0.5rem', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} />
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 rounded-xl font-black text-lg transition-all duration-200 hover:scale-105"
-              style={{
-                background: loading 
-                  ? 'rgba(255, 215, 0, 0.3)'
-                  : 'linear-gradient(135deg, #FFD700 0%, #FFC700 100%)',
-                color: '#000',
-                border: 'none',
-                boxShadow: loading ? 'none' : '0 0 30px rgba(255, 215, 0, 0.4)',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.6 : 1
-              }}
-            >
-              {loading ? '⏳ Logging in...' : '⚡ Login'}
+            <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', padding: '0.875rem', fontSize: '1rem', fontWeight: '600', marginTop: '0.5rem', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <p style={{ color: '#999999' }}>
-              Don't have an account?{' '}
-              <a
-                href="/register"
-                className="font-bold transition-colors duration-200"
-                style={{ color: '#FFD700' }}
-                onMouseEnter={(e) => e.target.style.color = '#FFC700'}
-                onMouseLeave={(e) => e.target.style.color = '#FFD700'}
-              >
-                Register here →
-              </a>
+          <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+              Don't have an account? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>Create account</Link>
             </p>
           </div>
         </div>
-
-        {/* Bottom Glow */}
-        <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 w-3/4 h-20 rounded-full opacity-20" style={{
-          background: 'radial-gradient(ellipse, #FFD700 0%, transparent 70%)',
-          filter: 'blur(30px)'
-        }}></div>
       </div>
-
-      <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.1; transform: scale(1); }
-          50% { opacity: 0.15; transform: scale(1.05); }
-        }
-      `}</style>
     </div>
   );
 }

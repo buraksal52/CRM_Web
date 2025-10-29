@@ -10,40 +10,31 @@ import PrivateRoute from './components/PrivateRoute'
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen" style={{ background: 'var(--bg-secondary)' }}>
       <Toaster
         position="top-right"
         reverseOrder={false}
         gutter={8}
         toastOptions={{
-          // Default options
-          duration: 4000,
+          duration: 3000,
           style: {
-            background: '#363636',
-            color: '#fff',
+            background: 'white',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            padding: '16px',
+            boxShadow: 'var(--shadow-lg)',
           },
-          // Success
           success: {
-            duration: 3000,
             iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
-            },
-            style: {
-              background: '#059669',
-              color: '#fff',
+              primary: 'var(--success)',
+              secondary: 'white',
             },
           },
-          // Error
           error: {
-            duration: 4000,
             iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
-            },
-            style: {
-              background: '#dc2626',
-              color: '#fff',
+              primary: 'var(--danger)',
+              secondary: 'white',
             },
           },
         }}

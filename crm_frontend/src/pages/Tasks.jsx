@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { isAdmin, canModifyResource, getUserId } from '../utils/auth';
+import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmModal from '../components/ConfirmModal';
 import { showSuccess, showError } from '../utils/toast';
@@ -30,7 +31,6 @@ function Tasks() {
   const userIsAdmin = isAdmin();
   const currentUserId = parseInt(getUserId());
 
-  // Fetch tasks on component mount and when filter changes
   useEffect(() => {
     fetchUsers();
     fetchTasks();
@@ -38,8 +38,6 @@ function Tasks() {
 
   const fetchUsers = async () => {
     try {
-      // Since we don't have a users endpoint, we'll get unique users from tasks
-      // In a real app, you'd have a /api/users/ endpoint
       const response = await api.get('/tasks/');
       const uniqueUserIds = [...new Set(response.data.map(task => task.assigned_to).filter(id => id !== null))];
       setUsers(uniqueUserIds);
@@ -61,8 +59,6 @@ function Tasks() {
       }
       
       const response = await api.get(`/tasks/?${params.toString()}`);
-      
-      // Handle paginated response
       const data = response.data.results || response.data;
       const count = response.data.count || data.length;
       
@@ -83,6 +79,21 @@ function Tasks() {
     }
   };
 
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  };
+
+  const formatDateForDisplay = (dateString) => {
+    if (!dateString) return 'No due date';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -90,12 +101,11 @@ function Tasks() {
 
   const handleCompletedFilterChange = (e) => {
     setCompletedFilter(e.target.value);
-    setCurrentPage(1); // Reset to first page when filter changes
+    setCurrentPage(1);
   };
 
   const handleOpenModal = (task = null) => {
     if (task) {
-      // Edit mode
       setEditingTask(task);
       setFormData({
         title: task.title,
@@ -105,7 +115,6 @@ function Tasks() {
         completed: task.completed,
       });
     } else {
-      // Create mode - if regular user, pre-assign to themselves
       setEditingTask(null);
       setFormData({
         title: '',
@@ -149,17 +158,15 @@ function Tasks() {
       };
 
       if (editingTask) {
-        // Update existing task
         await api.patch(`/tasks/${editingTask.id}/`, submitData);
-        showSuccess('Task updated successfully! ✅');
+        showSuccess('Task updated successfully!');
       } else {
-        // Create new task
         await api.post('/tasks/', submitData);
-        showSuccess('Task created successfully! 🎉');
+        showSuccess('Task created successfully!');
       }
       
       handleCloseModal();
-      fetchTasks(); // Refresh the list
+      fetchTasks();
     } catch (err) {
       const errorMessage = err.response?.data?.detail || 'Failed to save task';
       setError(errorMessage);
@@ -177,10 +184,10 @@ function Tasks() {
 
     try {
       await api.delete(`/tasks/${taskToDelete.id}/`);
-      showSuccess(`Task "${taskToDelete.title}" deleted successfully! 🗑️`);
+      showSuccess(`Task deleted successfully!`);
       setShowDeleteModal(false);
       setTaskToDelete(null);
-      fetchTasks(); // Refresh the list
+      fetchTasks();
     } catch (err) {
       const errorMessage = err.response?.data?.detail || 'Failed to delete task';
       setError(errorMessage);
@@ -195,391 +202,435 @@ function Tasks() {
         completed: !task.completed,
       });
       const status = !task.completed ? 'completed' : 'reopened';
-      showSuccess(`Task marked as ${status}! ${!task.completed ? '✅' : '🔄'}`);
-      fetchTasks(); // Refresh the list
+      showSuccess(`Task marked as ${status}!`);
+      fetchTasks();
     } catch (err) {
-      const errorMessage = err.response?.data?.detail || 'Failed to update task status';
+      const errorMessage = err.response?.data?.detail || 'Failed to update task';
       setError(errorMessage);
       showError(errorMessage);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    navigate('/login');
-  };
-
-  const formatDateForInput = (dateString) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const isOverdue = (dueDate, completed) => {
-    if (completed) return false;
-    return new Date(dueDate) < new Date();
-  };
+  if (loading) {
+    return (
+      <Layout>
+        <LoadingSpinner text="Loading tasks..." />
+      </Layout>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="text-blue-500 hover:text-blue-700 font-semibold"
-            >
-              ← Back to Dashboard
-            </button>
-            <h1 className="text-2xl font-bold text-gray-800">Tasks</h1>
+    <Layout>
+      <div className="fade-in-up">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+              Tasks
+            </h1>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Manage and track your tasks ({totalCount} total)
+            </p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
-          >
-            Logout
+          <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+            <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Task
           </button>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="fade-in" style={{
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 'var(--border-radius)',
+            color: 'var(--danger)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
             {error}
           </div>
         )}
 
-        {/* Filters and Create */}
-        <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="min-w-[200px]">
-              <select
-                value={completedFilter}
-                onChange={handleCompletedFilterChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Tasks</option>
-                <option value="false">Pending</option>
-                <option value="true">Completed</option>
-              </select>
-            </div>
-            <button
-              onClick={() => handleOpenModal()}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded whitespace-nowrap ml-auto"
+        <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontWeight: '600', color: 'var(--text-primary)' }}>Filter by status:</label>
+            <select
+              value={completedFilter}
+              onChange={handleCompletedFilterChange}
+              style={{
+                padding: '0.5rem 1rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '0.5rem',
+                background: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                fontSize: '0.875rem',
+                cursor: 'pointer'
+              }}
             >
-              + Create Task
-            </button>
+              <option value="">All Tasks</option>
+              <option value="false">Pending</option>
+              <option value="true">Completed</option>
+            </select>
           </div>
         </div>
 
-        {/* Tasks Table */}
-        {loading ? (
-          <LoadingSpinner text="Loading tasks..." />
-        ) : tasks.length === 0 ? (
-          <div className="bg-white p-8 rounded-lg shadow-md text-center">
-            <p className="text-gray-600">No tasks found.</p>
+        {tasks.length === 0 ? (
+          <div className="card fade-in" style={{ padding: '3rem', textAlign: 'center' }}>
+            <div style={{
+              width: '4rem',
+              height: '4rem',
+              margin: '0 auto 1rem',
+              borderRadius: '50%',
+              background: 'rgba(30, 64, 175, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <svg style={{ width: '2rem', height: '2rem', color: 'var(--primary)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+              No tasks found
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              Create your first task to get started
+            </p>
+            <button className="btn btn-primary" onClick={() => handleOpenModal()}>
+              Create Task
+            </button>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-md overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assigned To
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Due Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tasks.map((task) => (
-                  <tr 
-                    key={task.id} 
-                    className={`hover:bg-gray-50 ${
-                      task.completed ? 'bg-green-50' : isOverdue(task.due_date, task.completed) ? 'bg-red-50' : ''
-                    }`}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={task.completed}
-                        onChange={() => handleToggleComplete(task)}
-                        className="h-5 w-5 text-blue-600 cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      <div className={task.completed ? 'line-through text-gray-500' : ''}>
-                        {task.title}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                      {task.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {task.assigned_to_name || 'Unassigned'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className={
-                        task.completed 
-                          ? 'text-gray-500' 
-                          : isOverdue(task.due_date, task.completed) 
-                          ? 'text-red-600 font-semibold' 
-                          : 'text-gray-900'
-                      }>
-                        {formatDate(task.due_date)}
-                        {isOverdue(task.due_date, task.completed) && (
-                          <span className="ml-2 text-xs">(Overdue)</span>
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            {tasks.map((task, index) => (
+              <div 
+                key={task.id} 
+                className="card fade-in-up" 
+                style={{ 
+                  padding: '1.5rem',
+                  animationDelay: `${index * 0.05}s`,
+                  borderLeft: task.completed ? '4px solid var(--success)' : '4px solid var(--warning)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <button
+                        onClick={() => handleToggleComplete(task)}
+                        disabled={!canModifyResource(task.assigned_to)}
+                        style={{
+                          width: '1.5rem',
+                          height: '1.5rem',
+                          borderRadius: '50%',
+                          border: `2px solid ${task.completed ? 'var(--success)' : 'var(--border-color)'}`,
+                          background: task.completed ? 'var(--success)' : 'transparent',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: canModifyResource(task.assigned_to) ? 'pointer' : 'not-allowed',
+                          opacity: canModifyResource(task.assigned_to) ? 1 : 0.5,
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {task.completed && (
+                          <svg style={{ width: '1rem', height: '1rem', color: 'white' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
                         )}
+                      </button>
+                      <h3 style={{
+                        fontSize: '1.125rem',
+                        fontWeight: '600',
+                        color: 'var(--text-primary)',
+                        textDecoration: task.completed ? 'line-through' : 'none',
+                        opacity: task.completed ? 0.6 : 1
+                      }}>
+                        {task.title}
+                      </h3>
+                    </div>
+                    
+                    {task.description && (
+                      <p style={{
+                        color: 'var(--text-secondary)',
+                        marginBottom: '1rem',
+                        lineHeight: '1.6'
+                      }}>
+                        {task.description}
+                      </p>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.875rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-tertiary)' }}>
+                        <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {formatDateForDisplay(task.due_date)}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      {canModifyResource('task', task) && (
-                        <>
-                          <button
-                            onClick={() => handleOpenModal(task)}
-                            className="text-blue-600 hover:text-blue-900 font-medium"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(task)}
-                            className="text-red-600 hover:text-red-900 font-medium"
-                          >
-                            Delete
-                          </button>
-                        </>
+                      {task.assigned_to && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-tertiary)' }}>
+                          <svg style={{ width: '1rem', height: '1rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          User #{task.assigned_to}
+                        </div>
                       )}
-                      {!canModifyResource('task', task) && (
-                        <span className="text-gray-400 text-xs sm:text-sm">No actions available</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+
+                  {canModifyResource(task.assigned_to) && (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => handleOpenModal(task)}
+                        className="btn"
+                        style={{
+                          padding: '0.5rem',
+                          background: 'transparent',
+                          color: 'var(--primary)',
+                          border: '1px solid var(--border-color)'
+                        }}
+                        title="Edit"
+                      >
+                        <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(task)}
+                        className="btn"
+                        style={{
+                          padding: '0.5rem',
+                          background: 'transparent',
+                          color: 'var(--danger)',
+                          border: '1px solid var(--border-color)'
+                        }}
+                        title="Delete"
+                      >
+                        <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Pagination Controls */}
-        {!loading && tasks.length > 0 && totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
-            <div className="text-sm text-gray-700">
-              Showing page <span className="font-medium">{currentPage}</span> of{' '}
-              <span className="font-medium">{totalPages}</span> ({totalCount} total tasks)
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              
-              {/* Page Numbers */}
-              <div className="flex gap-1">
-                {/* First Page */}
-                {currentPage > 2 && (
-                  <>
-                    <button
-                      onClick={() => handlePageChange(1)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      1
-                    </button>
-                    {currentPage > 3 && (
-                      <span className="px-2 py-2 text-gray-500">...</span>
-                    )}
-                  </>
-                )}
-                
-                {/* Previous Page */}
-                {currentPage > 1 && (
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    {currentPage - 1}
-                  </button>
-                )}
-                
-                {/* Current Page */}
-                <button
-                  className="px-3 py-2 border-2 border-blue-500 rounded-lg text-sm font-medium text-blue-600 bg-blue-50"
-                  disabled
-                >
-                  {currentPage}
-                </button>
-                
-                {/* Next Page */}
-                {currentPage < totalPages && (
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                  >
-                    {currentPage + 1}
-                  </button>
-                )}
-                
-                {/* Last Page */}
-                {currentPage < totalPages - 1 && (
-                  <>
-                    {currentPage < totalPages - 2 && (
-                      <span className="px-2 py-2 text-gray-500">...</span>
-                    )}
-                    <button
-                      onClick={() => handlePageChange(totalPages)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                    >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-              </div>
+        {totalPages > 1 && (
+          <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="btn"
+              style={{
+                padding: '0.5rem 1rem',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                opacity: currentPage === 1 ? 0.5 : 1,
+                cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Previous
+            </button>
+            
+            <span style={{ padding: '0.5rem 1rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
+              Page {currentPage} of {totalPages}
+            </span>
 
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="btn"
+              style={{
+                padding: '0.5rem 1rem',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                opacity: currentPage === totalPages ? 0.5 : 1,
+                cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Next
+            </button>
           </div>
         )}
       </div>
 
-      {/* Modal for Create/Edit */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-6">
-              {editingTask ? 'Edit Task' : 'Create Task'}
-            </h2>
-            
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }} onClick={handleCloseModal}>
+          <div className="card scale-in" style={{
+            maxWidth: '500px',
+            width: '100%',
+            padding: '2rem',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>
+                {editingTask ? 'Edit Task' : 'Create New Task'}
+              </h2>
+              <button onClick={handleCloseModal} style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-tertiary)',
+                cursor: 'pointer',
+                padding: '0.25rem'
+              }}>
+                <svg style={{ width: '1.5rem', height: '1.5rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
             <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-gray-700 font-semibold mb-2">
-                  Title
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label htmlFor="title" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                  Title *
                 </label>
                 <input
                   type="text"
+                  id="title"
                   name="title"
                   value={formData.title}
                   onChange={handleFormChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter task title"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '1rem'
+                  }}
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 font-semibold mb-2">
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label htmlFor="description" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                   Description
                 </label>
                 <textarea
+                  id="description"
                   name="description"
                   value={formData.description}
                   onChange={handleFormChange}
-                  required
-                  rows="4"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter task description"
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '1rem',
+                    resize: 'vertical'
+                  }}
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="block text-gray-700 font-semibold mb-2">
-                  Assigned To (User ID)
-                </label>
-                <input
-                  type="number"
-                  name="assigned_to"
-                  value={formData.assigned_to}
-                  onChange={handleFormChange}
-                  disabled={!userIsAdmin}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    !userIsAdmin ? 'bg-gray-100 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Enter user ID (optional)"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  {userIsAdmin 
-                    ? 'Leave empty for unassigned' 
-                    : 'Regular users can only create tasks assigned to themselves'}
-                </p>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-gray-700 font-semibold mb-2">
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label htmlFor="due_date" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                   Due Date
                 </label>
                 <input
-                  type="datetime-local"
+                  type="date"
+                  id="due_date"
                   name="due_date"
                   value={formData.due_date}
                   onChange={handleFormChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '0.5rem',
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '1rem'
+                  }}
                 />
               </div>
 
-              <div className="mb-6">
-                <label className="flex items-center">
+              {userIsAdmin && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label htmlFor="assigned_to" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+                    Assign To
+                  </label>
+                  <select
+                    id="assigned_to"
+                    name="assigned_to"
+                    value={formData.assigned_to}
+                    onChange={handleFormChange}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '0.5rem',
+                      background: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '1rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="">Unassigned</option>
+                    {users.map(userId => (
+                      <option key={userId} value={userId}>User #{userId}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     name="completed"
                     checked={formData.completed}
                     onChange={handleFormChange}
-                    className="h-4 w-4 text-blue-600 mr-2"
+                    style={{ width: '1.125rem', height: '1.125rem', cursor: 'pointer' }}
                   />
-                  <span className="text-gray-700 font-semibold">Mark as Completed</span>
+                  <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>Mark as completed</span>
                 </label>
               </div>
 
-              <div className="flex justify-end space-x-3">
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                  className="btn"
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: 'transparent',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-color)'
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+                  className="btn btn-primary"
+                  style={{ padding: '0.75rem 1.5rem' }}
                 >
-                  {editingTask ? 'Update' : 'Create'}
+                  {editingTask ? 'Update Task' : 'Create Task'}
                 </button>
               </div>
             </form>
@@ -587,18 +638,20 @@ function Tasks() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={confirmDelete}
-        title="Delete Task"
-        message={`Are you sure you want to delete "${taskToDelete?.title}"? This action cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        type="danger"
-      />
-    </div>
+      {showDeleteModal && (
+        <ConfirmModal
+          isOpen={showDeleteModal}
+          title="Delete Task"
+          message={`Are you sure you want to delete the task "${taskToDelete?.title}"? This action cannot be undone.`}
+          confirmText="Delete"
+          onConfirm={confirmDelete}
+          onCancel={() => {
+            setShowDeleteModal(false);
+            setTaskToDelete(null);
+          }}
+        />
+      )}
+    </Layout>
   );
 }
 
